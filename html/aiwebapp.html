@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(to bottom, #87ceeb, #ffffff); /* Sky to snowy ground */
+            font-family: 'Arial', sans-serif;
+        }
+        h1 {
+            margin: 0;
+            font-size: 36px;
+            color: #2c3e50;
+            text-shadow: 2px 2px 5px #ff0000;
+        }
+        canvas {
+            border: 5px solid #007bff; /* Blue border */
+            background: #ffffff; /* Snowy background */
+            box-shadow: 0px 0px 20px rgba(0, 0, 255, 0.8);
+        }
+        .button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .start-btn {
+            background-color: #007bff;
+            border: none;
+            color: white;
+            text-shadow: 1px 1px 2px #000;
+        }
+        .start-btn:hover {
+            background-color: #0056b3;
+        }
+        .play-again-btn {
+            background-color: #28a745;
+            border: none;
+            color: white;
+            text-shadow: 1px 1px 2px #000;
+        }
+        .play-again-btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎄 Christmas Snake Game 🎅</h1>
+    <br>
+    <a href="scratch.html">Scratch Page</a>
+    <a href="../index.html">Home/Resume</a>
+    <br>
+
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <button class="button start-btn" onclick="startGame()">Start</button>
+    <div id="scoreBoard" style="margin-top: 20px; font-size: 18px;">
+        Highest Score: <span id="highestScore">0</span>
+    </div>
+    <div id="playAgainBox" style="display: none;">
+        <button class="button play-again-btn" onclick="startGame()">Play Again</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const boxSize = 40; // Double the size
+        const canvasSize = canvas.width;
+        let snake = [{ x: boxSize * 5, y: boxSize * 5 }];
+        let food = createRandomFood();
+        let direction = 'RIGHT';
+        let score = 0;
+        let highestScore = 0;
+        let gameOver = false;
+        let gameInterval;
+        let speed = 150; // Slower speed (higher value)
+
+        function startGame() {
+            snake = [{ x: boxSize * 5, y: boxSize * 5 }];
+            food = createRandomFood();
+            direction = 'RIGHT';
+            score = 0;
+            gameOver = false;
+            clearInterval(gameInterval);
+            gameInterval = setInterval(drawGame, speed);
+            document.getElementById('playAgainBox').style.display = 'none';
+        }
+
+        document.addEventListener('keydown', changeDirection);
+
+        function changeDirection(event) {
+            const key = event.keyCode;
+            if (key === 37 && direction !== 'RIGHT') direction = 'LEFT';
+            else if (key === 38 && direction !== 'DOWN') direction = 'UP';
+            else if (key === 39 && direction !== 'LEFT') direction = 'RIGHT';
+            else if (key === 40 && direction !== 'UP') direction = 'DOWN';
+        }
+
+        function createRandomFood() {
+            return {
+                x: Math.floor(Math.random() * (canvasSize / boxSize)) * boxSize,
+                y: Math.floor(Math.random() * (canvasSize / boxSize)) * boxSize,
+                type: Math.random() > 0.5 ? 'ornament' : 'star'
+            };
+        }
+
+        function drawCircle(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x + boxSize / 2, y + boxSize / 2, boxSize / 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawStar(x, y, color) {
+            const cx = x + boxSize / 2;
+            const cy = y + boxSize / 2;
+            const spikes = 5;
+            const outerRadius = boxSize / 2;
+            const innerRadius = boxSize / 3;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < spikes * 2; i++) {
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                const angle = (Math.PI * i) / spikes;
+                const px = cx + Math.cos(angle) * radius;
+                const py = cy + Math.sin(angle) * radius;
+                ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function updateSnake() {
+            const head = { ...snake[0] };
+
+            if (direction === 'LEFT') head.x -= boxSize;
+            if (direction === 'UP') head.y -= boxSize;
+            if (direction === 'RIGHT') head.x += boxSize;
+            if (direction === 'DOWN') head.y += boxSize;
+
+            // Check collision with walls
+            if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize) {
+                gameOver = true;
+            }
+
+            // Check collision with self
+            for (const segment of snake) {
+                if (segment.x === head.x && segment.y === head.y) {
+                    gameOver = true;
+                }
+            }
+
+            snake.unshift(head);
+
+            // Check if food is eaten
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                food = createRandomFood();
+            } else {
+                snake.pop();
+            }
+
+            // Update highest score
+            if (score > highestScore) {
+                highestScore = score;
+                document.getElementById('highestScore').innerText = highestScore;
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw snake
+            snake.forEach((segment, index) => {
+                const color = index % 2 === 0 ? 'green' : 'red';
+                ctx.fillStyle = color;
+                ctx.fillRect(segment.x, segment.y, boxSize, boxSize);
+            });
+
+            // Draw food
+            if (food.type === 'ornament') {
+                drawCircle(food.x, food.y, 'red'); // Ornament as a circle
+            } else if (food.type === 'star') {
+                drawStar(food.x, food.y, 'gold'); // Star shape
+            }
+
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 20);
+
+            if (gameOver) {
+                ctx.fillStyle = 'red';
+                ctx.font = '30px Arial';
+                ctx.fillText("Game Over!", canvasSize / 4, canvasSize / 2);
+                document.getElementById('playAgainBox').style.display = 'block';
+                clearInterval(gameInterval);
+            } else {
+                updateSnake();
+            }
+        }
+    </script>
+</body>
+</html>
